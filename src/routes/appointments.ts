@@ -59,7 +59,7 @@ router.post("/", async (req, res) => {
   } catch (err: any) {
     res
       .status(err.status || 400)
-      .json({ message: err.message || "Invalid request" });
+      .json({ message: err.message || "Invalid request. Please check your input." });
   }
 });
 

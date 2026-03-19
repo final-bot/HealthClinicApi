@@ -4,12 +4,13 @@
 
 ### Product features:
 - Ability to book appointments between a clinician and a patient
-- Admin has ability to view all appointments (including a limit or time range)
+- Admin has ability to view all appointments (including a limit or time range, sorted in ASCENDING order)
 - Ability to view appointments for a specific clinician
 
 ### Design decisions:
+- Typescript/Express server setup for type safety & simplicity
 - Prisma + SQLite for simplicity and reliability
-- Zod for validation
+- Zod for schema validation
 - Service layer for business logic
 - Overlap handled via query condition: start < other.end && end > other.start
 
@@ -22,8 +23,7 @@ npx prisma migrate dev
 npm run dev
 ```
 
-You will see you're now connected to SQLite database via port 3000
-
+You will see you're now connected to the server/database via port 3000
 
 ## Running tests
 
@@ -35,7 +35,7 @@ npm test
 
 # API examples
 
-Use the below examples to test the Clinic API. Just copy + paste into your terminal after starting up your server (either locally or via Docker)
+Use the below examples to test the Clinic API. Just copy + paste into your terminal after starting up your server (either locally (port 3000) or via Dockerfile (port 3001))
 
 ### Create appointment - 201
 
@@ -114,6 +114,7 @@ curl http://localhost:3000/clinicians/c1/appointments
 curl http://localhost:3000/appointments \
 -H "x-role: admin"
 ```
+
 - With from/to filtering
 
 ```bash
@@ -139,15 +140,22 @@ curl http://localhost:3000/appointments
 # Docker via Dockerfile
 
 ```dockerfile
-FROM node:18
+FROM node:20
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y sqlite3
+
+COPY package*.json ./
+RUN npm install
+
 COPY . .
 
-RUN npm install
 RUN npx prisma generate
 
-CMD ["npm", "run", "dev"]
+EXPOSE 3001
+
+CMD sh -c "npx prisma migrate deploy && npm run dev"
 ```
 
 ### Build the image
@@ -191,7 +199,7 @@ http://localhost:3000/docs
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-# Tradeoffs: 
+# Tradeoffs/considerations: 
 
 - ### No real authentication (header simulation only)
 
