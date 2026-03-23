@@ -1,20 +1,21 @@
 import { Router } from "express";
-import { deleteAppointment } from "../../services/appointment/deleteAppointment";
 import { requireRole } from "../../middleware/role";
+import { deleteAppointment } from "../../services/appointment/deleteAppointment";
 
 const router = Router();
 
 router.delete("/:id", requireRole("admin"), async (req, res) => {
-  const result = await deleteAppointment(req.params.id, {
-    start: new Date(req.body.start),
-    end: new Date(req.body.end),
-    clinicianId: req.body.clinicianId,
-    patientId: req.body.patientId,
-    deletionReason: req.body.deletionReason,
-    deletedBy: req.body.deletedBy, // TODO: get user ID from auth context instead of request body
-  });
+  const { id } = req.params;
+  const { deletedBy, deletionReason } = req.body;
+
+  const result = await deleteAppointment(id, deletedBy, deletionReason);
 
   switch (result.type) {
+    case "missing_metadata":
+      return res.status(400).json({
+        message: "deletedBy and deletionReason are required",
+      });
+
     case "not_found":
       return res.status(404).json({ message: "Appointment not found" });
 
@@ -25,10 +26,7 @@ router.delete("/:id", requireRole("admin"), async (req, res) => {
 
     case "too_late":
       return res.status(409).json({
-        error: {
-          code: "CANCELLATION_WINDOW_EXCEEDED",
-          message: "Cannot cancel within 60 minutes",
-        },
+        message: `Cannot delete within ${60} minutes of appointment`,
       });
 
     case "success":

@@ -10,8 +10,12 @@ beforeEach(async () => {
   await prisma.clinician.deleteMany();
 
   // Insert data in database for testing purposes
-  await prisma.clinician.createMany({ data: [{ id: "c1" }, { id: "c2" }, { id: "c3" }] });
-  await prisma.patient.createMany({ data: [{ id: "p1" }, { id: "p2" }, { id: "p3" }] });
+  await prisma.clinician.createMany({
+    data: [{ id: "c1" }, { id: "c2" }, { id: "c3" }],
+  });
+  await prisma.patient.createMany({
+    data: [{ id: "p1" }, { id: "p2" }, { id: "p3" }],
+  });
 
   await prisma.appointment.createMany({
     data: [
@@ -48,7 +52,7 @@ describe("Appointments API", () => {
       start: "2030-01-04T10:00:00.000Z",
       end: "2030-01-04T11:00:00.000Z",
       clinicianId: "c2",
-      patientId: "p2"
+      patientId: "p2",
     });
 
     expect(res.status).toBe(201);
@@ -56,13 +60,13 @@ describe("Appointments API", () => {
 
   it("filters appointments using both 'from' and 'to'", async () => {
     const res = await request(app).get(
-      "/clinicians/c1/appointments?from=2030-01-01T00:00:00Z&to=2030-01-02T00:00:00Z"
+      "/clinicians/c1/appointments?from=2030-01-01T00:00:00Z&to=2030-01-02T00:00:00Z",
     );
 
     expect(res.status).toBe(200);
     expect(res.body.length).toBe(1);
     expect(new Date(res.body[0].start).toISOString()).toBe(
-      "2030-01-01T10:00:00.000Z"
+      "2030-01-01T10:00:00.000Z",
     );
   });
 
@@ -71,14 +75,14 @@ describe("Appointments API", () => {
       start: "2030-01-01T10:00:00.000Z",
       end: "2030-01-01T11:00:00.000Z",
       clinicianId: "c2",
-      patientId: "p1"
+      patientId: "p1",
     });
 
     const res = await request(app).post("/appointments").send({
       start: "2030-01-01T10:30:00.000Z",
       end: "2030-01-01T11:30:00.000Z",
       clinicianId: "c2",
-      patientId: "p2"
+      patientId: "p2",
     });
 
     expect(res.status).toBe(409);
@@ -91,70 +95,105 @@ describe("Appointments API", () => {
   });
 
   it("should delete a future appointment", async () => {
-  const appt = await prisma.appointment.create({
-    data: {
-      clinicianId: "c1",
-      patientId: "p1",
-      start: new Date(Date.now() + 2 * 60 * 60 * 1000),
-      end: new Date(Date.now() + 3 * 60 * 60 * 1000),
-    },
+    const appt = await prisma.appointment.create({
+      data: {
+        clinicianId: "c1",
+        patientId: "p1",
+        start: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        end: new Date(Date.now() + 3 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .delete(`/appointments/${appt.id}`)
+      .set("X-Role", "admin")
+      .send({
+        deletedBy: "admin",
+        deletionReason: "Test cleanup",
+      });
+
+    expect(res.status).toBe(204);
   });
 
-  const res = await request(app)
-    .delete(`/appointments/${appt.id}`)
-    .set("X-Role", "admin");
+  it("should reject deleting past appointment", async () => {
+    const appt = await prisma.appointment.create({
+      data: {
+        clinicianId: "c1",
+        patientId: "p1",
+        start: new Date(Date.now() - 60 * 60 * 1000),
+        end: new Date(Date.now() - 30 * 60 * 1000),
+      },
+    });
 
-  expect(res.status).toBe(204);
-});
+    const res = await request(app)
+      .delete(`/appointments/${appt.id}`)
+      .set("X-Role", "admin")
+      .send({
+        deletedBy: "admin",
+        deletionReason: "Too late",
+      });
 
-it("should reject deleting past appointment", async () => {
-  const appt = await prisma.appointment.create({
-    data: {
-      clinicianId: "c1",
-      patientId: "p1",
-      start: new Date(Date.now() - 60 * 60 * 1000),
-      end: new Date(Date.now() - 30 * 60 * 1000),
-    },
+    expect(res.status).toBe(409);
   });
 
-  const res = await request(app)
-    .delete(`/appointments/${appt.id}`)
-    .set("X-Role", "admin");
+  it("should reject deleting within cancellation window", async () => {
+    const appt = await prisma.appointment.create({
+      data: {
+        clinicianId: "c1",
+        patientId: "p1",
+        start: new Date(Date.now() + 30 * 60 * 1000),
+        end: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
 
-  expect(res.status).toBe(409);
-});
+    const res = await request(app)
+      .delete(`/appointments/${appt.id}`)
+      .set("X-Role", "admin")
+      .send({
+        deletedBy: "admin",
+        deletionReason: "Too late",
+      });
 
-it("should reject deleting within cancellation window", async () => {
-  const appt = await prisma.appointment.create({
-    data: {
-      clinicianId: "c1",
-      patientId: "p1",
-      start: new Date(Date.now() + 30 * 60 * 1000), // 30 mins away
-      end: new Date(Date.now() + 60 * 60 * 1000),
-    },
+    expect(res.status).toBe(409);
   });
 
-  const res = await request(app)
-    .delete(`/appointments/${appt.id}`)
-    .set("X-Role", "admin");
+  it("should reject deletion if deletedBy or deletionReason missing", async () => {
+    const appt = await prisma.appointment.create({
+      data: {
+        clinicianId: "c1",
+        patientId: "p1",
+        start: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        end: new Date(Date.now() + 3 * 60 * 60 * 1000),
+      },
+    });
 
-  expect(res.status).toBe(409);
-});
+    const res = await request(app)
+      .delete(`/appointments/${appt.id}`)
+      .set("X-Role", "admin")
+      .send({}); // missing metadata
 
-it("should forbid non-admin delete", async () => {
-  const appt = await prisma.appointment.create({
-    data: {
-      clinicianId: "c1",
-      patientId: "p1",
-      start: new Date(Date.now() + 2 * 60 * 60 * 1000),
-      end: new Date(Date.now() + 3 * 60 * 60 * 1000),
-    },
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/deletedBy and deletionReason/);
   });
 
-  const res = await request(app)
-    .delete(`/appointments/${appt.id}`)
-    .set("X-Role", "patient");
+  it("should forbid non-admin delete", async () => {
+    const appt = await prisma.appointment.create({
+      data: {
+        clinicianId: "c1",
+        patientId: "p1",
+        start: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        end: new Date(Date.now() + 3 * 60 * 60 * 1000),
+      },
+    });
 
-  expect(res.status).toBe(403);
-});
+    const res = await request(app)
+      .delete(`/appointments/${appt.id}`)
+      .set("X-Role", "patient")
+      .send({
+        deletedBy: "patient",
+        deletionReason: "Should not be allowed",
+      });
+
+    expect(res.status).toBe(403);
+  });
 });
