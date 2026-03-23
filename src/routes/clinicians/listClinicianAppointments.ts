@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { getClinicianAppointments } from "../services/appointmentService";
-
+import { listClinicianAppointments } from "../../services/clinician/listClinicianAppointments";
 const router = Router();
 
 /**
@@ -34,7 +33,7 @@ router.get("/:id/appointments", async (req, res) => {
   const { id } = req.params;
   const { from, to } = req.query;
 
-  const appointments = await getClinicianAppointments(
+  const appointments = await listClinicianAppointments(
     id,
     from ? new Date(from as string) : undefined,
     to ? new Date(to as string) : undefined

@@ -89,4 +89,72 @@ describe("Appointments API", () => {
 
     expect(res.status).toBe(200);
   });
+
+  it("should delete a future appointment", async () => {
+  const appt = await prisma.appointment.create({
+    data: {
+      clinicianId: "c1",
+      patientId: "p1",
+      start: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      end: new Date(Date.now() + 3 * 60 * 60 * 1000),
+    },
+  });
+
+  const res = await request(app)
+    .delete(`/appointments/${appt.id}`)
+    .set("X-Role", "admin");
+
+  expect(res.status).toBe(204);
+});
+
+it("should reject deleting past appointment", async () => {
+  const appt = await prisma.appointment.create({
+    data: {
+      clinicianId: "c1",
+      patientId: "p1",
+      start: new Date(Date.now() - 60 * 60 * 1000),
+      end: new Date(Date.now() - 30 * 60 * 1000),
+    },
+  });
+
+  const res = await request(app)
+    .delete(`/appointments/${appt.id}`)
+    .set("X-Role", "admin");
+
+  expect(res.status).toBe(409);
+});
+
+it("should reject deleting within cancellation window", async () => {
+  const appt = await prisma.appointment.create({
+    data: {
+      clinicianId: "c1",
+      patientId: "p1",
+      start: new Date(Date.now() + 30 * 60 * 1000), // 30 mins away
+      end: new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+
+  const res = await request(app)
+    .delete(`/appointments/${appt.id}`)
+    .set("X-Role", "admin");
+
+  expect(res.status).toBe(409);
+});
+
+it("should forbid non-admin delete", async () => {
+  const appt = await prisma.appointment.create({
+    data: {
+      clinicianId: "c1",
+      patientId: "p1",
+      start: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      end: new Date(Date.now() + 3 * 60 * 60 * 1000),
+    },
+  });
+
+  const res = await request(app)
+    .delete(`/appointments/${appt.id}`)
+    .set("X-Role", "patient");
+
+  expect(res.status).toBe(403);
+});
 });

@@ -2,8 +2,8 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
 
-import appointmentRoutes from "./routes/appointments";
-import clinicianRoutes from "./routes/clinicians";
+import appointmentRoutes from "./routes";
+import clinicianRoutes from "./routes/clinicians/listClinicianAppointments";
 
 export const app = express();
 

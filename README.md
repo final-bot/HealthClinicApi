@@ -135,6 +135,32 @@ curl "http://localhost:3000/appointments?limit=2" \
 curl http://localhost:3000/appointments
 ```
 
+### Successful delete as admin - 200
+
+```bash
+curl -X DELETE http://localhost:3000/appointments/<id> \
+-H "X-Role: admin"
+```
+
+### Non-admin delete - 409
+
+```bash
+curl -X DELETE http://localhost:3000/appointments/<id> \
+-H "X-Role: patient"
+```
+
+### Successful admin delete with reason and deletedBy fulfilled - 200
+
+```bash
+curl -X DELETE http://localhost:3000/appointments/<id> \
+-H "Content-Type: application/json" \
+-H "X-Role: admin" \
+-d '{                                 
+  "deletedBy": "admin",             
+  "deletionReason": "Patient requested cancellation"
+}'
+```
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 # Docker via Dockerfile

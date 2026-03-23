@@ -1,4 +1,5 @@
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
+import { checkOverlap } from "../utils/overlapCheck";
 
 export async function createAppointment(data: {
   start: Date;
@@ -28,14 +29,7 @@ export async function createAppointment(data: {
       create: { id: data.patientId }
     });
 
-    // Overlap check for transaction
-    const overlap = await tx.appointment.findFirst({
-      where: {
-        clinicianId: data.clinicianId,
-        start: { lt: data.end },
-        end: { gt: data.start }
-      }
-    });
+    const overlap = await checkOverlap(tx, data);
 
     if (overlap) {
       throw { status: 409, message: "Appointment overlaps existing booking. Please check and try again." };
@@ -44,42 +38,5 @@ export async function createAppointment(data: {
     return tx.appointment.create({
       data
     });
-  });
-}
-
-export async function getClinicianAppointments(
-  clinicianId: string,
-  from?: Date,
-  to?: Date
-) {
-  const now = new Date();
-
-  return prisma.appointment.findMany({
-    where: {
-      clinicianId,
-      start: {
-        gte: from ?? now,
-        ...(to && { lte: to })
-      }
-    }
-  });
-}
-
-export async function getAllAppointments(
-  from?: Date,
-  to?: Date,
-  limit?: number
-) {
-  return prisma.appointment.findMany({
-    where: {
-      start: {
-        gte: from,
-        ...(to && { lte: to })
-      },
-    },
-    orderBy: {
-      start: "asc",
-    },
-    take: limit,
   });
 }
