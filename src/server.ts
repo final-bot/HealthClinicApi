@@ -1,7 +1,16 @@
 import app from "./app";
 import { prisma } from "./lib/prisma";
+import cors from "cors";
 
 const PORT = process.env.PORT || 3000;
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "DELETE"],
+    allowedHeaders: ["Content-Type", "X-Role"],
+  })
+);
 
 async function start() {
   try {
