@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Grid,
   Snackbar,
   Alert,
   TextField,
@@ -8,18 +7,26 @@ import {
   Stack,
   Paper,
   Typography,
-  Button,
+  Fab,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Box,
 } from "@mui/material";
-import AppointmentForm from "../components/AppointmentForm";
+import AddIcon from "@mui/icons-material/Add";
+
 import AppointmentTable from "../components/AppointmentTable";
-import { useAppointments } from "../hooks/useAppointments";
 import CalendarView from "../components/CalendarView";
+import CreateAppointmentDialog from "../components/CreateAppointmentDialog";
+import { useAppointments } from "../hooks/useAppointments";
 
 export default function Home() {
   const [limit, setLimit] = useState(10);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [view, setView] = useState<"table" | "calendar">("calendar");
+  const [open, setOpen] = useState(false);
+  const [prefill, setPrefill] = useState<any>(null);
 
   const [toast, setToast] = useState({
     open: false,
@@ -36,83 +43,102 @@ export default function Home() {
 
   return (
     <>
-      <Grid container spacing={4} sx={{ margin: "40px" }}>
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <AppointmentForm onSuccess={refetch} setToast={setToast} />
-        </Grid>
+      <Box sx={{ position: "relative", px: { xs: 2, md: 4 } }}>
+        {/* Header */}
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Appointments
+        </Typography>
 
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper sx={{ borderRadius: 3 }}>
-            <Typography variant="h6" sx={{ p: 2 }}>
-              View Appointments
-            </Typography>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={2}
-              sx={{ p: 2 }}
+        <Paper sx={{ borderRadius: 3, mb: 3, p: 2 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              type="datetime-local"
+              onChange={(e) => setFrom(e.target.value)}
+              fullWidth
+            />
+            <TextField
+              type="datetime-local"
+              onChange={(e) => setTo(e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              select
+              label="Limit"
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+              sx={{ minWidth: 120 }}
             >
-              <TextField
-                type="datetime-local"
-                onChange={(e) => setFrom(e.target.value)}
-                fullWidth
-              />
-              <TextField
-                type="datetime-local"
-                onChange={(e) => setTo(e.target.value)}
-                fullWidth
-              />
+              {[5, 10, 20, 50].map((n) => (
+                <MenuItem key={n} value={n}>
+                  {n}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
 
-              <TextField
-                select
-                label="Limit"
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-                sx={{ minWidth: 120 }}
-              >
-                {[5, 10, 20, 50].map((n) => (
-                  <MenuItem key={n} value={n}>
-                    {n}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={2}
-              justifyContent="center"
-              alignItems="center"
-              sx={{ mb: 1, p: 2 }}
+          <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
+            <ToggleButtonGroup
+              value={view}
+              exclusive
+              onChange={(_, val) => val && setView(val)}
             >
-              <Button
-                type="submit"
-                variant="contained"
-                onClick={() => setView("calendar")}
-              >
-                Calendar View
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                onClick={() => setView("table")}
-              >
-                Table View
-              </Button>
-            </Stack>
+              <ToggleButton value="calendar">Calendar</ToggleButton>
+              <ToggleButton value="table">Table</ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+        </Paper>
 
-            {view === "calendar" ? (
-              <CalendarView appointments={data} />
-            ) : (
-              <AppointmentTable
-                appointments={data}
-                loading={isLoading}
-                refresh={refetch}
-                setToast={setToast}
-              />
-            )}
-          </Paper>
-        </Grid>
-      </Grid>
+        <Paper sx={{ borderRadius: 3, p: 2 }}>
+          {view === "calendar" ? (
+            <CalendarView
+              appointments={data}
+              onSelectSlot={(slot: any) => {
+                setPrefill({
+                  start: slot.start,
+                  end: slot.end,
+                });
+                setOpen(true);
+              }}
+            />
+          ) : (
+            <AppointmentTable
+              appointments={data}
+              loading={isLoading}
+              refresh={refetch}
+              setToast={setToast}
+            />
+          )}
+        </Paper>
+
+        <Tooltip title="Create Appointment">
+          <Fab
+            color="primary"
+            sx={{
+              position: "fixed",
+              bottom: 32,
+              right: 32,
+            }}
+            onClick={() => setOpen(true)}
+          >
+            <AddIcon />
+          </Fab>
+        </Tooltip>
+
+        <CreateAppointmentDialog
+          open={open}
+          onClose={() => setOpen(false)}
+          onSuccess={() => {
+            refetch();
+            setToast({
+              open: true,
+              message: "Appointment created",
+              severity: "success",
+            });
+          }}
+          prefill={prefill}
+        />
+      </Box>
 
       <Snackbar
         open={toast.open}

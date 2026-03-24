@@ -15,7 +15,7 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-export default function CalendarView({ appointments }: any) {
+export default function CalendarView({ appointments, onSelectSlot }: any) {
   const events = appointments.map((appt: any) => ({
     title: `${appt.clinicianId} → ${appt.patientId}`,
     start: new Date(appt.start),
@@ -43,6 +43,8 @@ export default function CalendarView({ appointments }: any) {
         })}
         step={15}
         timeslots={2}
+        selectable
+        onSelectSlot={onSelectSlot}
         scrollToTime={new Date()}
         dayPropGetter={(date) => ({
           style: {

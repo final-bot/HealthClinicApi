@@ -6,6 +6,7 @@ import Contact from "./pages/Contact";
 import { ThemeProvider } from "@mui/material/styles";
 import { lightTheme, darkTheme } from "./theme";
 import { useState } from "react";
+import Footer from "./components/Footer";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
         </Routes>
       </Router>
+      <Footer />
     </ThemeProvider>
   );
 }
