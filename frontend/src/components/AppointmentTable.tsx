@@ -47,8 +47,6 @@ export default function AppointmentTable({ appointments, loading, refresh, setTo
   if (appointments.length === 0) return <Typography>No appointments</Typography>;
 
   return (
-    <Paper sx={{ borderRadius: 3 }}>
-      <Typography variant="h6" sx={{ p: 2 }}>Appointments</Typography>
     <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
       <Table>
         <TableHead>
@@ -73,13 +71,12 @@ export default function AppointmentTable({ appointments, loading, refresh, setTo
                 />
               </TableCell>
               <TableCell>
-                <Button color="error" onClick={() => handleDelete(appt.id)}>Delete</Button>
+                <Button type="submit" variant="contained" color="error" onClick={() => handleDelete(appt.id)}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </TableContainer>
-    </Paper>
   );
 }

@@ -3,8 +3,8 @@ export default {
   theme: {
   extend: {
     fontFamily: {
-        heading: ['AlteHaasGroteskBold', 'serif'],
-        body: ['"Fjalla One", serif'],
+        heading: ['Bricolage Grotesque', 'serif'],
+        body: ['"Bricolage Grotesque", serif'],
     },
   },
 },
